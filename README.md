@@ -33,7 +33,7 @@ Esta herramienta permite visualizar, consultar y exportar información sobre la 
 3. Descarga los datos geográficos desde: [SITU Santa Cruz](https://situ.santacruz.gob.ar/geoportal/visor/emergencias) (Red Provincial, Base Vial, Zonas de Conservación), [Portal del IGN](https://www.ign.gob.ar/NuestrasActividades/InformacionGeoespacial/CapasSIG) (Red Nacional, Areas Protegidas, Centros Urbanos y Paso Internacional), [IDERA](https://www.idera.gob.ar/index.php/servicios/otras-ide-y-visualizadores) (Referencia nacional y acceso a otros visores)
 4. Abre el archivo .Rmd en RStudio y ejecuta el visor.
 ## Sobre la autora
-- Desarrollado por Dévora Vanesa Antiñirre, Maestra Mayor de Obras. Profesional técnica especializada en gestión, organización y presentación de información geografica aplicada a Obras Públicas en la provincia de Santa Cruz.
+- Desarrollado por Dévora Vanesa Antiñirre, Maestra Mayor de Obras. Profesional técnica con experiencia en gestión, organización y presentación de información geografica aplicada a Obras Públicas en la provincia de Santa Cruz.
 ## Licencia
 - Este proyecto se publica bajo la Licencia Pública General de GNU, version 3 (GPL v3).
 - Copyright (c) 2025 Dévora Vanesa Antiñirre
