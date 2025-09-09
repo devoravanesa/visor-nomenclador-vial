@@ -1,0 +1,351 @@
+---
+title: VISOR INSTITUCIONAL
+output:
+  flexdashboard::flex_dashboard:
+    vertical_layout: fill
+    orientation: columns
+    theme:
+      bg: "#ffffff"
+      fg: "#262524"
+      primary: "#54595F"
+      secondary: "#000000"
+    navbar:
+       - { title: "IDE Santa Cruz", href: "https://situ.santacruz.gob.ar/geoportal/visor/ide_santacruz", target: "_blank", rel: "noopener noreferrer", align: right }
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(dplyr)
+library(sf)
+library(DT)
+library(leaflet)
+library(leaflet.extras)
+library(htmlwidgets)
+library(leaflet.extras2)
+library(shiny)
+```
+
+```{r, include=FALSE}
+lp<-st_zm(st_read("c:/vnsa/PROY_R/datos/santa_cruz.gpkg"),drop=T,what="ZM")
+rn<-st_zm(st_read("c:/vnsa/PROY_R/datos/red_nacional.gpkg"),drop=T,what="ZM")
+cu<-st_zm(st_read("c:/vnsa/PROY_R/datos/centros_urbanos.gpkg"),drop=T,what="ZM")
+ap<-st_zm(st_read("c:/vnsa/PROY_R/datos/area_protegida.gpkg"),drop=T,what="ZM")
+pjs<-st_zm(st_read("c:/vnsa/PROY_R/datos/parajes.gpkg"),drop=T,what="ZM")
+rp<-st_zm(st_read("c:/vnsa/PROY_R/datos/red_pcial.gpkg"),drop=T,what="ZM")
+pv<-st_zm(st_read("c:/vnsa/PROY_R/datos/puestos.gpkg"),drop=T,what="ZM")
+pf<-st_zm(st_read("c:/vnsa/PROY_R/datos/pasos_fronterizos.gpkg"),drop=T,what="ZM")
+cat_ut<-st_zm(st_read("c:/vnsa/PROY_R/datos/cat_vial.gpkg"),drop=T,what="ZM")
+zn<-st_zm(st_read("c:/vnsa/PROY_R/datos/zonas.gpkg"),drop=T,what="ZM")
+
+icn <- makeIcon(iconUrl = "c:/vnsa/PROY_R/datos/Logo Institucional/AGVP_2024.png",
+                iconWidth = 32, iconHeight = 32,
+                iconAnchorX = 32, iconAnchorY = 32)
+gn <- makeIcon(iconUrl = "c:/vnsa/PROY_R/datos/gendarmeria_nacional_escudo.png",
+                iconWidth = 36, iconHeight = 15,
+                iconAnchorX = 15, iconAnchorY = 36)
+pna<- makeIcon(iconUrl = "c:/vnsa/PROY_R/datos/prefectura-escudo_0_0.png",
+                iconWidth = 36, iconHeight = 15,
+                iconAnchorX = 15, iconAnchorY = 36)
+
+rp_categ <-select(rp,NOMBRE,tp_calzada,geom)                       
+rn_categ <-select(rn,rtn,rst,geom)
+colnames(rn_categ) = c("NOMBRE", "tp_calzada", "geom")
+rsc_categ <- rbind(rp_categ,rn_categ)
+
+color_ref <- c("Brown","green","blue","grey","black","red")
+ord_ref <- factor(rsc_categ$tp_calzada,
+             labels = c("Pavimentada","Consolidada","Enripiada","Natural","Huella","Sin Abrir"))
+
+pal <- colorFactor(palette = color_ref,
+                   levels = ord_ref,
+                   ordered = TRUE)
+pal_rp <-
+  colorFactor(palette = c("red","blue","Brown","black","grey"),
+              levels = c("Pavimentada","Enripiada","Natural","Huella","Sin Abrir"))
+pal_rn <-
+  colorFactor(palette = c("red","green"),
+              levels = c("Pavimentada","Consolidada"))
+                                    
+color_zn <- colorRampPalette(c("#7dee61ff","#5ad9a0ff","#c770daff","#e33380ff","#2ab3edff","#d5da74ff","#524bd9ff"))
+pal_zn <- colorFactor(palette = color_zn(length(unique(zn$distrito))), 
+  domain = zn$distrito, ordered = TRUE)
+
+js <- c("function(settings){",
+        "  var datatable = settings.oInstance.api();",
+        "  var table = datatable.table().node();",
+        "  var caption = 'ANOTHER CAPTION'",
+        "  $(table).append('<caption style=\"caption-side: bottom\">' + caption + '</caption>');",
+        "}")
+```
+
+column 1{.tabset}
+---
+
+### RED PROVINCIAL DE CAMINOS
+>
+**IMPORTANTE:** Las consultas que realices son de carácter informativo y en ningún caso representa o sustituye el inicio de cualquier trámite o procedimiento administrativo.
+
+Para interactuar con el Mapa del Universo Vial de la Provincia tenés controles situados en el **margen superior derecho** que activan o desactivan capas, podés intercambiar entre mapas base, mover la barra de paneles arrastrando hacia los lados, medir distancias y áreas, tambien podés ampliar a pantalla completa (View Fullscreen) y hacer zoom con la ruedita del mouse o los controles de la **izquierda superior** para volver a la vista original teclea **F5**. Además al posicionarte sobre algún objeto geográfico podrás obtener más información vinculada a la fuente del dato haciendo **clic** sobre ellos.
+
+```{r,}
+leaflet() %>% 
+  addMapPane("left", zIndex = 0)%>%
+  addMapPane("right", zIndex = 0)%>%
+  addTiles("https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png",
+      attribution = ('<a href="http://leafletjs.com/target="_blank"rel="noopener noreferrer"</a>
+              <a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2/target="_blank"rel="noopener noreferrer">Instituto Geográfico Nacional</a>'),
+      options = pathOptions(pane = "left",
+                            interactive = TRUE),
+      layerId = "cartoid",
+      group="<b>Argenmap IGN</b> (Panel Derecho)")%>%
+  addProviderTiles(providers$OpenStreetMap,
+      options = pathOptions(pane = "right",
+                            interactive = TRUE),
+      layerId = "baseid",
+      group = "<b>OpenStreetMap</b> (Panel Izquierdo)")%>%
+  addTiles("https://2.aerial.maps.api.here.com/maptile/2.1/maptile/newest/satellite.day/{z}/{x}/{y}/256/png8?app_id=XiMlA4JwMurUFFYUWYe3&app_code=oTsmqovbl2YudG3E0UlxDA",
+      options = pathOptions(pane = "left",
+                            interactive = TRUE),
+            group="<b>Here</b> (Panel Derecho)")%>%
+  addProviderTiles(providers$Esri.WorldImagery,
+      options = pathOptions(pane = "right",
+                            interactive = TRUE),
+      group = "<b>Esri</b> (Panel Izquierdo)")%>%
+  addSidebyside(layerId = "sidecontrols",
+                leftId = "cartoid",
+                rightId = "baseid")%>%
+  addMouseCoordinates(epsg = 4326, 
+                      proj4string = NULL, 
+                      native.crs = TRUE)%>%
+  addFullscreenControl()%>%
+  setView(
+       lat=-49, 
+       lng=-69.73, 
+       zoom = 6.8)%>%
+  addLayersControl(
+    baseGroups = c("<b>Argenmap IGN</b> (Panel Derecho)","<b>OpenStreetMap</b> (Panel Izquierdo)","<b>Esri</b> (Panel Izquierdo)","<b>Here</b> (Panel Derecho)"),
+    overlayGroups = c("Centros Urbanos","Areas Protegidas","Catastro Vial","Zonas de Influencia", "Red Provincial","Red Nacional","Dependencia Vial","Paso Internacional"),
+    position = "topright",
+    options = layersControlOptions(collapsed = TRUE,
+                                   autoZIndex = TRUE))%>%
+  addMeasure(
+      position = "topright",
+      primaryLengthUnit = "meters",
+      secondaryLengthUnit = "kilometers",
+      primaryAreaUnit = "sqmeters",
+      secondaryAreaUnit = NULL,
+      activeColor = "#ABE67E",
+      completedColor = "#C8F2BE",
+      popupOptions = list(className = "leaflet-measure-resultpopup", 
+                          autoPanPadding = c(10,10)),
+      captureZIndex = 10000,
+      localization = "es",
+      decPoint = ",",
+      thousandsSep = ".")%>%
+  addPolygons(
+      data = cu, 
+      layerId = cu$id,
+      group = "Centros Urbanos",
+      color="#F5E2CD", 
+      weight=0.50,
+      opacity=3,
+      label = ~paste(fna))%>%
+  addPolygons(
+      data = ap, 
+      layerId = ap$id,
+      group = "Areas Protegidas",
+      color="#1EAC3F",
+      weight=0.50,
+      opacity=3,
+      popup = ~paste("<br>",fna,
+                     "<hr>","<b>Proveedor del dato:</b>",sag,
+                     "<br>","<b>Fuente:</b>",fdc,
+                     "<br>","<b>Productor del Dato:</b>","A.P.N.",
+                     "<hr>","<b>Ver</b>","<b><a href='https://www.argentina.gob.ar/parquesnacionales/areas-protegidas'target='_blank' rel='noopener noreferrer'>Mapa APN 2023</a></b>", "<b>de la Administración Parques Nacionales</b>"),
+      label = ~paste(objeto),
+      labelOptions = labelOptions(
+                        noHide = F, 
+                        direction = "top",
+                        textsize = "15px",
+                        style = list("font-weight" = "bold",
+                                     padding = "5px"),
+                        interactive = TRUE),
+      highlightOptions = highlightOptions(color = "white",
+                                          weight = 2,
+                                          bringToFront = TRUE))%>%
+  addPolygons(
+      data = cat_ut,
+      layerId = cat_ut$id, 
+      group = "Catastro Vial",
+      color= "#de9a73", 
+      weight=2,
+      opacity=1,
+      dashArray = "3",
+      smoothFactor = 1,
+      highlightOptions = highlightOptions(color = "#666",
+                                      weight = 3,
+                                      dashArray = "",
+                                      fillOpacity = 0.7,
+                                      bringToFront = FALSE))%>%
+  addPolygons(
+      data = zn,
+      layerId = zn$id, 
+      group = "Zonas de Influencia",
+      color= "white", 
+      weight=2,
+      opacity=1,
+      fillColor = ~pal_zn(zn$distrito),
+      fillOpacity = 0.2,
+      dashArray = "3",
+      smoothFactor = 1,
+      popup = ~paste("<br>","<b>Zona:</b>",zna,"<b>Cabecera:</b>",distrito,
+                     "<hr>","<b>Fuente de Información:</b>", "A.G.V.P.",
+                     "<br>","<b>Productor del Dato:</b>", "Dirección de Ingeniería Vial",
+                     "<hr>","<b>Ver</b>","<b>Inventario Vial</b>"),
+      label = ~paste(zna),
+      labelOptions = labelOptions(
+                        noHide = T, 
+                        direction = "auto",
+                        textOnly = TRUE,
+                        textsize = "20px",
+                        style = list("font-weight" = "bold",
+                                     "color"= "#ed6e43"),
+                        interactive = FALSE,
+                        sticky = FALSE),
+      highlightOptions = highlightOptions(color = "#666",
+                                          weight = 5,
+                                          dashArray = "",
+                                          fillOpacity = 0.7,
+                                          bringToFront = FALSE))%>%
+  addPolylines(
+      data = rp, 
+      layerId = rp$id,
+      group = "Red Provincial",
+      color= ~pal_rp(tp_calzada),
+      weight=1.5,
+      opacity=3, 
+      popup = ~paste("<br>","<b>RUTA PROVINCIAL N°</b>",NOMBRE,
+                     "<br>","<b>Calzada:</b>",tp_calzada,
+                     "<br>","<b>Longitud:</b>",lenght,"km",
+                     "<br>","<b>Superpone R.P.N°:</b>",Superpone,
+                     "<br>","<b>Nomenclatura Anterior:</b>",Anterior,
+                     "<hr>","<b>Inicio de tramo:</b>", Inicio,
+                     "<br>","<b>Fin de tramo:</b>",Fin,
+                     "<br>","<b>Longitud Total del tramo:</b>",LONGUITUD,"km",
+                     "<br>","<b>Fuente de Información:</b>", "A.G.V.P.",
+                     "<br>","<b>Productor del Dato:</b>", "Dirección de Ingeniería Vial",
+                     "<hr>","<b>Ver</b>","<b><a href='https://www.agvp.gob.ar/parte-rutas-provinciales/'target='_blank' rel='noopener noreferrer'>Parte de Rutas</a></b>","<b>del Dep.Reg.M. y C.</b>"),
+      label = ~paste("R.P.N°",NOMBRE,tramo),
+      labelOptions = labelOptions(
+                        noHide = F, 
+                        direction = "top",
+                        textsize = "15px",
+                        style = list("font-weight" = "bold",
+                                     padding = "5px"),
+                        interactive = FALSE),
+      highlightOptions = highlightOptions(color = "yellow",
+                                          weight = 4,
+                                          bringToFront = TRUE))%>%
+  addPolylines(
+      data = rn, 
+      layerId = rn$id,
+      group = "Red Nacional",
+      color= ~pal_rn(rst),
+      weight=1.5,
+      opacity=3,
+      popup = ~paste("<br>","<b>Ruta Nacional N°</b>",rtn,
+                     "<br>","<b>Calzada:</b>",rst,
+                     "<br>","<b>Ver</b>","<b><a href='https://www.argentina.gob.ar/obras-publicas/vialidad-nacional/estado-de-las-rutas/'target='_blank' rel='noopener noreferrer'>Estado de Rutas</a></b>",
+                     "<hr>","<b>Fuente de Información:</b>", sag,
+                     "<br>","<b>Productor del Dato:</b>", fdc,
+                     "<hr>","<b>Ver</b>","<b><a href='https://sigvial.vialidad.gob.ar/'target='_blank' rel='noopener noreferrer'>SIG-Vial</a></b>", "<b>de la Dirección Nacional de Vialidad</b>"),
+      label = ~paste("R.N.N°",rtn),
+      labelOptions = labelOptions(
+                        noHide = F, 
+                        direction = "top",
+                        textsize = "15px",
+                        style = list("font-weight" = "bold",
+                                     padding = "5px"),
+                        interactive = TRUE),
+      highlightOptions = highlightOptions(color = "#636363", 
+                                          weight = 4,
+                                          bringToFront = TRUE))%>%
+  addMarkers(
+    data =pv,
+    layerId = pv$id,
+    group = "Dependencia Vial",
+    icon = icn,
+    popup = ~paste(  "<br>",clase,Nombre,
+                     "<br>","<b>Dependencia:</b>",dependenci,
+                     "<br>","<b>Jurisdicción:</b>", Jurisdicci,
+                     "<hr>","<b>Fuente de Información:</b>", "A.G.V.P.",
+                     "<br>","<b>Productor del Dato:</b>", "Dirección de Ingeniería Vial",
+                     "<hr>","<b><a href='https://www.agvp.gob.ar/contactenos/distritos/'target='_blank' rel='noopener noreferrer'> Contáctenos</a></b>"),
+    clusterOptions = markerClusterOptions(iconCreateFunction=JS("function (cluster) {var childCount = cluster.getChildCount();if (childCount < 10) {c = 'rgba(240, 248, 0, 1);'} else if (childCount < 3) {c = 'rgba(240, 248, 0, 1);'} else {c = 'rgba(240, 248, 0, 1);'}return new L.DivIcon({ html: '<div style=\"background-color:'+c+'\"><span>' + childCount + '</span></div>',className: 'marker-cluster'});}"),spiderfyOnMaxZoom = TRUE),
+    label = ~paste("Base Vial"),
+    labelOptions = labelOptions(
+                        noHide = F, 
+                        direction = "top",
+                        textsize = "15px",
+                        style = list("font-weight" = "bold",
+                                     padding = "5px"),
+                        interactive = TRUE))%>%
+  addMarkers(
+    data =pf,
+    layerId = pf$id,
+    group = "Paso Internacional",
+    icon = gn,
+    popup = ~paste("<br>",cod_pfi,
+                   "<hr>","<b>Nombre:</b>",nom_pfi,
+                   "<br>","<b>Autoridad:</b>",autoridad,
+                   "<br>","<b>Tipo:</b>",cat_pfi,
+                   "<br>","<b>Departamento:</b>", depto,
+                   "<br>","<b>Cruce:</b>",cruce_pfi,
+                   "<hr>","<b><a href='https://www.argentina.gob.ar/seguridad/pasosinternacionales'target='_blank' rel='noopener noreferrer'> Ver más</a></b>"),
+    clusterOptions = markerClusterOptions(iconCreateFunction=JS("function (cluster) {var childCount = cluster.getChildCount();if (childCount < 20) {c = 'rgba(111, 165, 17, 0.88);'} else if (childCount < 8) {c = 'rgba(111, 165, 17, 0.88);'} else {c = 'rgba(111, 165, 17, 0.88);'}return new L.DivIcon({ html: '<div style=\"background-color:'+c+'\"><span>' + childCount + '</span></div>',className: 'marker-cluster'});}"),
+    spiderfyOnMaxZoom = TRUE))%>%
+  addLegend(position = "bottomright",
+            pal = pal,
+            values = ord_ref,
+            opacity = 1,
+            title = "Tipos de Calzada de la Red Vial Provincial")
+```
+
+### NOMENCLADOR VIAL
+>
+El Nomenclador Vial es un catálogo, una herramienta de gestión que organiza, clasifica y ordena la Red Provincial de Caminos, entendido como un sistema dinámico requiere de procesos de actualización periódica, en tanto que prevee mecanismos de altas, bajas y modificaciones surgidas a partir de nuevas necesidades, tecnologías o modos de gestionar la red. En este sentido, la **versión 2023** elaborada por la División I Inventario Vial dependiente de la Dirección de Ingeniería Vial, está basada en los registros de antecendes especialmente en el Decreto Provincial N°140/86 e incluye entre otras modificaciones, la incorporación de la **Ruta Escénica Camino Cordillerano N°41**.
+
+Organizá los datos para visualizarlos a tu gusto, también podes ocultar columnas y descargar el archivo en dos formatos e imprimir.
+
+```{r, include=FALSE}
+tabla_rp <- select(rp,NOMBRE,tramo,Inicio,Fin,LONGUITUD,SUPERPOSIC,PAVIMENTO,ENRIPIADO,SUELO_NATU,HUELLA,SIN_ABRIR)%>% st_drop_geometry(rp)
+
+
+tabla_ncldr <- datatable(tabla_rp,
+                         colnames = c("Ruta", "Tramo", "Inicio de Tramo", "Fin de Tramo","Longitud [Km]","Superposición [Km]","Pavimento [Km]","Enripiado [Km]","Suelo Natural [Km]","Huella [Km]","Sin Abrir [Km]"),
+                         callback = JS('table.page("next").draw(false);'),
+                         extensions = c("Buttons","KeyTable"),
+                         options = list(dom = "Bfrtip",
+                                        buttons = list(list(extend = "colvis",
+                                                            text = "Ocultar"),
+                                                       list(extend = "print",
+                                                            text = "Imprimir"),
+                                                       list(extend = "collection",
+                                                            buttons = c('csv', 'pdf'),
+                                                            text = "Descargar")),
+                                        keys = TRUE,
+                                        language = list(url = "https://cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json")),
+                         rownames = FALSE,
+                         style = "auto",
+                         width = "100%",
+                         caption = "VERSIÓN 2023")
+
+```
+
+```{r,fig.width=2, fig.height=10, fig.fullwidth=TRUE}
+tabla_ncldr
+```
+
+<a href= 'https://www.R-project.org/'target='_blank' rel='noopener noreferrer'a> 
+`R Core Team (2022).R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.`
+
